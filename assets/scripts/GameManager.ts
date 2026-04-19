@@ -1,28 +1,24 @@
 // GameManager.ts
 // 关卡状态管理器
-// 负责：步数、分数、目标、关卡结束判定
-// 也是剧情系统和好感度系统的接入口
+// 负责：步数、分数、目标、关卡结束判定、关卡进度管理
 
-import { _decorator, Component, Label } from "cc";
+import { _decorator, Component, Label, Node, resources, JsonAsset } from "cc";
 import { BoardController } from "./BoardController";
 import { TileCell, TileType } from "./TileData";
 
 const { ccclass, property } = _decorator;
 
-// 关卡配置数据结构（从 JSON 读取）
 export interface LevelConfig {
     levelId:       number;
     maxSteps:      number;
-    targetType:    TileType;    // 需要消除的方块类型
-    targetCount:   number;      // 需要消除的数量
-    storyTrigger?: number;      // 通关后触发的剧情 ID（可选）
-    charId?:       number;      // 触发哪位角色的剧情
+    targetType:    TileType;
+    targetCount:   number;
+    storyTrigger?: number;
+    charId?:       number;
 }
 
-// 关卡结果
 export type LevelResult = "win" | "lose" | "playing";
 
-// 好感度变化事件（供外部监听）
 export type AffinityEvent = {
     charId: number;
     delta:  number;
@@ -44,25 +40,98 @@ export class GameManager extends Component {
     @property(Label)
     labelTarget!: Label;
 
-    // ─── 关卡状态 ──────────────────────────────────────────────
+    @property(Label)
+    labelLevel: Label = null!;
+
+    @property(Node)
+    resultPanelNode: Node = null!;
 
     private config!: LevelConfig;
-    private stepsLeft  = 0;
-    private score      = 0;
-    private eliminated = 0;   // 目标方块已消除数量
+    stepsLeft  = 0;
+    score      = 0;
+    private eliminated = 0;
     private result: LevelResult = "playing";
 
-    // 好感度（4 位男主独立存储，持久化）
+    private allLevels: LevelConfig[] = [];
+    private currentLevelIndex = 0;
+
     private affinity: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
 
-    // 外部事件回调
     onLevelEnd: ((result: LevelResult, config: LevelConfig) => void) | null = null;
     onAffinity: ((event: AffinityEvent) => void) | null = null;
 
-    // ─── 初始化 ────────────────────────────────────────────────
-
     onLoad() {
         this.loadAffinity();
+        this.loadLevels();
+    }
+
+    private loadLevels() {
+        resources.load("LevelConfig", JsonAsset, (err, asset) => {
+            if (err) {
+                console.error("关卡配置加载失败，使用默认第一关", err);
+                this.startLevel(this.getDefaultLevel());
+                return;
+            }
+            this.allLevels = asset.json as LevelConfig[];
+            if (!this.allLevels || this.allLevels.length === 0) {
+                this.startLevel(this.getDefaultLevel());
+                return;
+            }
+
+            const savedIndex = this.loadLevelProgress();
+            this.currentLevelIndex = Math.min(savedIndex, this.allLevels.length - 1);
+            this.startCurrentLevel();
+        });
+    }
+
+    private getDefaultLevel(): LevelConfig {
+        return {
+            levelId: 1,
+            maxSteps: 25,
+            targetType: TileType.Guitar,
+            targetCount: 12,
+            charId: 0,
+        };
+    }
+
+    private startCurrentLevel() {
+        const config = this.allLevels[this.currentLevelIndex];
+        if (!config) return;
+        this.startLevel(config);
+
+        if (this.labelLevel) {
+            this.labelLevel.string = `第 ${config.levelId} 关`;
+        }
+    }
+
+    goToNextLevel() {
+        this.currentLevelIndex++;
+        if (this.currentLevelIndex >= this.allLevels.length) {
+            console.log("已到最后一关");
+            this.currentLevelIndex = this.allLevels.length - 1;
+            return;
+        }
+        this.saveLevelProgress();
+        this.startCurrentLevel();
+    }
+
+    retryCurrentLevel() {
+        this.startCurrentLevel();
+    }
+
+    private saveLevelProgress() {
+        try {
+            wx.setStorageSync("levelIndex", String(this.currentLevelIndex));
+        } catch (e) {}
+    }
+
+    private loadLevelProgress(): number {
+        try {
+            const raw = wx.getStorageSync("levelIndex");
+            return raw ? parseInt(raw) : 0;
+        } catch (e) {
+            return 0;
+        }
     }
 
     startLevel(config: LevelConfig) {
@@ -80,23 +149,17 @@ export class GameManager extends Component {
         this.updateUI();
     }
 
-    // ─── 消除回调（来自 BoardController）──────────────────────
-
     private onMatch(matched: TileCell[], score: number, isChain: boolean) {
         if (this.result !== "playing") return;
 
-        // 步数消耗
         this.stepsLeft = Math.max(0, this.stepsLeft - 1);
 
-        // 得分（连锁额外加成）
         const chainBonus = isChain ? Math.floor(score * 0.5) : 0;
         this.score += score + chainBonus;
 
-        // 统计目标方块
         const targetHit = matched.filter(c => c.type === this.config.targetType).length;
         this.eliminated += targetHit;
 
-        // 好感度：消除目标方块时增加关联角色好感
         if (targetHit > 0 && this.config.charId !== undefined) {
             const delta = targetHit * 2 + (isChain ? 5 : 0);
             this.addAffinity(this.config.charId, delta, "关卡消除");
@@ -107,12 +170,9 @@ export class GameManager extends Component {
     }
 
     private onDeadlock() {
-        // 死局：自动重新洗牌（不扣步数）
         console.log("死局，重新洗牌");
         this.board.resetBoard();
     }
-
-    // ─── 结果判定 ──────────────────────────────────────────────
 
     private checkResult() {
         const won  = this.eliminated >= this.config.targetCount;
@@ -120,20 +180,32 @@ export class GameManager extends Component {
 
         if (won) {
             this.result = "win";
-            // 通关好感度奖励
             if (this.config.charId !== undefined) {
                 this.addAffinity(this.config.charId, 10, "关卡通关");
             }
             this.saveAffinity();
             this.onLevelEnd?.("win", this.config);
+            this.showResult("win");
 
         } else if (lost) {
             this.result = "lose";
             this.onLevelEnd?.("lose", this.config);
+            this.showResult("lose");
         }
     }
 
-    // ─── 好感度系统 ────────────────────────────────────────────
+    private showResult(result: LevelResult) {
+        if (!this.resultPanelNode) {
+            console.warn("resultPanelNode 未绑定");
+            return;
+        }
+        const panel = this.resultPanelNode.getComponent("ResultPanel") as any;
+        if (panel && typeof panel.show === "function") {
+            panel.show(result, this.config, this.score, this.stepsLeft);
+        } else {
+            console.warn("ResultPanel 组件找不到或没有 show 方法");
+        }
+    }
 
     addAffinity(charId: number, delta: number, reason: string) {
         this.affinity[charId] = Math.min(100,
@@ -145,16 +217,13 @@ export class GameManager extends Component {
         return this.affinity[charId] ?? 0;
     }
 
-    // 好感度达到阈值时返回解锁的剧情 ID（供剧情系统查询）
     checkAffinityUnlock(charId: number): number | null {
         const val = this.getAffinity(charId);
-        if (val >= 90) return charId * 10 + 3;  // 第三段专属剧情
-        if (val >= 60) return charId * 10 + 2;  // 第二段
-        if (val >= 30) return charId * 10 + 1;  // 第一段
+        if (val >= 90) return charId * 10 + 3;
+        if (val >= 60) return charId * 10 + 2;
+        if (val >= 30) return charId * 10 + 1;
         return null;
     }
-
-    // ─── 本地存档（微信小游戏 API）────────────────────────────
 
     private saveAffinity() {
         try {
@@ -174,8 +243,6 @@ export class GameManager extends Component {
         }
     }
 
-    // ─── UI 更新 ───────────────────────────────────────────────
-
     private updateUI() {
         if (this.labelSteps)
             this.labelSteps.string = `步数：${this.stepsLeft}`;
@@ -189,11 +256,8 @@ export class GameManager extends Component {
         }
     }
 
-    // ─── 激励广告接口（微信 WAX）──────────────────────────────
-
-    // 看广告换 5 步（在 BoardController 锁定期间不可调用）
     watchAdForSteps() {
-        const adId = "YOUR_AD_UNIT_ID"; // 替换为你的广告单元 ID
+        const adId = "YOUR_AD_UNIT_ID";
         const ad = wx.createRewardedVideoAd({ adUnitId: adId });
 
         ad.onClose((res: any) => {
