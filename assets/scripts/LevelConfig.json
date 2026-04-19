@@ -1,0 +1,45 @@
+[
+  {
+    "levelId": 1,
+    "maxSteps": 25,
+    "targetType": 1,
+    "targetCount": 12,
+    "storyTrigger": 101,
+    "charId": 0,
+    "comment": "第1关：消除12个吉他拨片，通关触发叶司宸初见剧情"
+  },
+  {
+    "levelId": 2,
+    "maxSteps": 25,
+    "targetType": 2,
+    "targetCount": 12,
+    "storyTrigger": 102,
+    "charId": 1,
+    "comment": "第2关：消除12个鼓棒，通关触发方宁朔初见剧情"
+  },
+  {
+    "levelId": 3,
+    "maxSteps": 28,
+    "targetType": 3,
+    "targetCount": 15,
+    "storyTrigger": 103,
+    "charId": 2,
+    "comment": "第3关：消除15个黑胶唱片，通关触发顾铭川初见剧情"
+  },
+  {
+    "levelId": 5,
+    "maxSteps": 20,
+    "targetType": 1,
+    "targetCount": 20,
+    "comment": "第5关：限制步数更少，无剧情触发，纯挑战关"
+  },
+  {
+    "levelId": 8,
+    "maxSteps": 30,
+    "targetType": 4,
+    "targetCount": 25,
+    "storyTrigger": 201,
+    "charId": 0,
+    "comment": "第8关：首个里程碑关，通关后解锁叶司宸第一段深度剧情"
+  }
+]
