@@ -1,9 +1,9 @@
 // GameManager.ts
-// 关卡状态管理器
-// 负责：步数、分数、目标、关卡结束判定、关卡进度管理
+// 关卡状态管理器 + 剧情触发
 import { _decorator, Component, Label, Node, Graphics, Color, resources, JsonAsset } from "cc";
 import { BoardController } from "./BoardController";
 import { ResultPanel } from "./ResultPanel";
+import { StoryManager } from "./StoryManager";
 import { TileCell, TileType, TILE_COLORS, TILE_NAMES } from "./TileData";
 
 const { ccclass, property } = _decorator;
@@ -25,14 +25,12 @@ export type AffinityEvent = {
     reason: string;
 };
 
-// ─── 好感度规则配置 ─────────────────────────────────────────
-// 统一放在顶部，方便你调试数值
 const AFFINITY_RULES = {
-    perTargetTile:    1,     // 每个目标方块：弱化为 1 点
-    chainBonus:       2,     // 触发连锁：+2 点
-    clearReward:      5,     // 通关基础奖励：+5 点
-    threeStarBonus:   15,    // 三星通关额外奖励：+15 点（强化）
-    twoStarBonus:     5,     // 二星通关额外奖励：+5 点
+    perTargetTile:    1,
+    chainBonus:       2,
+    clearReward:      5,
+    threeStarBonus:   15,
+    twoStarBonus:     5,
 };
 
 @ccclass("GameManager")
@@ -59,15 +57,16 @@ export class GameManager extends Component {
     @property(ResultPanel)
     resultPanel: ResultPanel = null!;
 
+    @property(StoryManager)
+    storyManager: StoryManager = null!;
+
     private config!: LevelConfig;
     stepsLeft  = 0;
     score      = 0;
     private eliminated = 0;
     private result: LevelResult = "playing";
 
-    // 本关开始时各角色好感度的快照（用于在结算弹窗显示 +N 的变化）
     private affinityBefore: Record<number, number> = {};
-    // 本关好感度变化量（累加，包括通关奖励）
     affinityGainThisLevel = 0;
 
     private allLevels: LevelConfig[] = [];
@@ -75,12 +74,35 @@ export class GameManager extends Component {
 
     private affinity: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
 
+    // 记录已看过的剧情，避免重复播放
+    private seenStories: Set<number> = new Set();
+
     onLevelEnd: ((result: LevelResult, config: LevelConfig) => void) | null = null;
     onAffinity: ((event: AffinityEvent) => void) | null = null;
 
     onLoad() {
         this.loadAffinity();
+        this.loadSeenStories();
+        this.setupStoryCallback();
         this.loadLevels();
+    }
+
+    private setupStoryCallback() {
+        if (!this.storyManager) return;
+        // 剧情播放完毕后，把选择支带来的好感度加到当前角色上
+        this.storyManager.onStoryComplete = (storyId, affinityDelta) => {
+            console.log(`[GameManager] 剧情 ${storyId} 结束，好感度 +${affinityDelta}`);
+            this.seenStories.add(storyId);
+            this.saveSeenStories();
+
+            if (affinityDelta !== 0 && this.config?.charId !== undefined) {
+                this.addAffinity(this.config.charId, affinityDelta, "剧情选择");
+                this.saveAffinity();
+            }
+
+            // 剧情结束后显示结算弹窗
+            this.showResult("win");
+        };
     }
 
     private loadLevels() {
@@ -159,7 +181,6 @@ export class GameManager extends Component {
         this.eliminated = 0;
         this.result     = "playing";
 
-        // 记录好感度起点，用于结算时显示 +N
         this.affinityBefore = { ...this.affinity };
         this.affinityGainThisLevel = 0;
 
@@ -182,7 +203,6 @@ export class GameManager extends Component {
         const targetHit = matched.filter(c => c.type === this.config.targetType).length;
         this.eliminated += targetHit;
 
-        // 弱化的过程好感度：每个目标方块 +1，连锁 +2
         if (targetHit > 0 && this.config.charId !== undefined) {
             const delta = targetHit * AFFINITY_RULES.perTargetTile
                         + (isChain ? AFFINITY_RULES.chainBonus : 0);
@@ -198,7 +218,6 @@ export class GameManager extends Component {
         this.board.resetBoard();
     }
 
-    // 星级规则：和 ResultPanel 保持一致
     private calcStars(stepsLeft: number, maxSteps: number): number {
         const ratio = stepsLeft / maxSteps;
         if (ratio >= 1 / 3) return 3;
@@ -214,10 +233,8 @@ export class GameManager extends Component {
             this.result = "win";
 
             if (this.config.charId !== undefined) {
-                // 基础通关奖励
                 this.addAffinity(this.config.charId, AFFINITY_RULES.clearReward, "关卡通关");
 
-                // 按星级追加奖励（三星给得最多，推动玩家追求高星）
                 const stars = this.calcStars(this.stepsLeft, this.config.maxSteps);
                 if (stars === 3) {
                     this.addAffinity(this.config.charId, AFFINITY_RULES.threeStarBonus, "三星通关");
@@ -228,13 +245,38 @@ export class GameManager extends Component {
 
             this.saveAffinity();
             this.onLevelEnd?.("win", this.config);
-            this.showResult("win");
+
+            // 尝试触发剧情，若有剧情则先播剧情后结算；若无剧情直接结算
+            if (!this.tryPlayStory()) {
+                this.showResult("win");
+            }
 
         } else if (lost) {
             this.result = "lose";
             this.onLevelEnd?.("lose", this.config);
             this.showResult("lose");
         }
+    }
+
+    // 尝试播放当前关卡关联的剧情，返回 true 表示已触发
+    private tryPlayStory(): boolean {
+        if (!this.storyManager) return false;
+        if (this.config.storyTrigger === undefined) return false;
+
+        const storyId = this.config.storyTrigger;
+
+        // 已看过的剧情不再重播（避免重玩关卡时烦人）
+        if (this.seenStories.has(storyId)) {
+            console.log(`[GameManager] 剧情 ${storyId} 已看过，跳过`);
+            return false;
+        }
+
+        if (!this.storyManager.hasStory(storyId)) {
+            console.log(`[GameManager] 剧情 ${storyId} 不存在`);
+            return false;
+        }
+
+        return this.storyManager.playStory(storyId);
     }
 
     private showResult(result: LevelResult) {
@@ -257,7 +299,6 @@ export class GameManager extends Component {
         return this.affinity[charId] ?? 0;
     }
 
-    // 获取本关该角色好感度涨了多少（给 ResultPanel 用）
     getAffinityGainForChar(charId: number): number {
         const before = this.affinityBefore[charId] ?? 0;
         const now    = this.affinity[charId] ?? 0;
@@ -276,18 +317,31 @@ export class GameManager extends Component {
         try {
             wx.setStorageSync("affinity", JSON.stringify(this.affinity));
             wx.setStorageSync("levelProgress", this.config.levelId);
-        } catch (e) {
-            console.warn("存档失败", e);
-        }
+        } catch (e) {}
     }
 
     private loadAffinity() {
         try {
             const raw = wx.getStorageSync("affinity");
             if (raw) this.affinity = JSON.parse(raw);
-        } catch (e) {
-            console.warn("读档失败，使用默认值");
-        }
+        } catch (e) {}
+    }
+
+    private saveSeenStories() {
+        try {
+            const arr = Array.from(this.seenStories);
+            wx.setStorageSync("seenStories", JSON.stringify(arr));
+        } catch (e) {}
+    }
+
+    private loadSeenStories() {
+        try {
+            const raw = wx.getStorageSync("seenStories");
+            if (raw) {
+                const arr = JSON.parse(raw) as number[];
+                this.seenStories = new Set(arr);
+            }
+        } catch (e) {}
     }
 
     private updateUI() {
@@ -308,7 +362,6 @@ export class GameManager extends Component {
 
     private drawTargetIcon() {
         if (!this.targetIcon) return;
-
         const g = this.targetIcon.getComponent(Graphics);
         if (!g) return;
 
@@ -325,7 +378,6 @@ export class GameManager extends Component {
     watchAdForSteps() {
         const adId = "YOUR_AD_UNIT_ID";
         const ad = wx.createRewardedVideoAd({ adUnitId: adId });
-
         ad.onClose((res: any) => {
             if (res?.isEnded) {
                 this.stepsLeft += 5;

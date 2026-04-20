@@ -1,0 +1,83 @@
+{
+  "id": 301,
+  "name": "初见·刀子嘴的吉他手",
+  "charId": 2,
+  "defaultMode": "fullscreen",
+  "lines": [
+    {
+      "speaker": -2,
+      "text": "当你再一次走进排练室，另一个陌生的身影正抱着吉他坐在角落——指法精准得惊人。",
+      "bg": "rehearsal"
+    },
+    {
+      "speaker": 2,
+      "emotion": "angry",
+      "text": "停。你的乐感不够格管这支乐队。"
+    },
+    {
+      "speaker": -1,
+      "emotion": "normal",
+      "text": "……你还没听我说话。"
+    },
+    {
+      "speaker": 2,
+      "emotion": "normal",
+      "text": "我不需要听。这种事我十秒就能判断。"
+    },
+    {
+      "speaker": -2,
+      "text": "他头也不抬，指尖在琴弦上滑过，一段复杂的独奏流畅得不可思议。"
+    },
+    {
+      "speaker": 1,
+      "emotion": "happy",
+      "text": "铭川，别吓她。"
+    },
+    {
+      "speaker": 1,
+      "text": "（对你）他叫顾铭川，吉他手兼编曲。音乐世家出身，从小就被当成天才培养。嘴毒但不坏。"
+    },
+    {
+      "speaker": 2,
+      "emotion": "angry",
+      "text": "——别替我描补。"
+    },
+    {
+      "speaker": 2,
+      "emotion": "normal",
+      "text": "我就问你一个问题。"
+    },
+    {
+      "speaker": 2,
+      "text": "你觉得，什么样的音乐，能让一个已经不想唱歌的人，重新开口？"
+    },
+    {
+      "speaker": -1,
+      "emotion": "thinking",
+      "text": "（他在……考我？）"
+    },
+    {
+      "speaker": -2,
+      "text": "他抬起头，眼神锋利。你突然明白——这不是刁难，是求助。他想让叶司宸重新唱歌。"
+    },
+    {
+      "speaker": -1,
+      "emotion": "normal",
+      "text": "……能让他想起，自己为什么开始唱的那种。"
+    },
+    {
+      "speaker": 2,
+      "emotion": "normal",
+      "text": "……"
+    },
+    {
+      "speaker": 2,
+      "emotion": "normal",
+      "text": "及格。"
+    },
+    {
+      "speaker": -2,
+      "text": "他低下头继续拨弦，嘴角不易察觉地动了一下。你知道——这是他这种人能给出的，最高级别的认可。"
+    }
+  ]
+}

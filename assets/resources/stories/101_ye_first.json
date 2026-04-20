@@ -1,0 +1,141 @@
+{
+  "id": 101,
+  "name": "初见·排练室里的沉默",
+  "charId": 0,
+  "defaultMode": "fullscreen",
+  "lines": [
+    {
+      "speaker": -2,
+      "text": "推开那扇褪色的铁门，潮湿的地下室传来低沉的吉他回响。",
+      "bg": "rehearsal"
+    },
+    {
+      "speaker": -1,
+      "emotion": "thinking",
+      "text": "就是这里了吗……海报上那家快要解散的乐队。"
+    },
+    {
+      "speaker": -1,
+      "text": "灯光很暗，只有舞台那盏追光还亮着。一个身影站在麦克风前，侧脸冷得像冰。"
+    },
+    {
+      "speaker": 0,
+      "emotion": "angry",
+      "text": "——你是谁？"
+    },
+    {
+      "speaker": -1,
+      "emotion": "shy",
+      "text": "啊，不好意思，我是……"
+    },
+    {
+      "speaker": 0,
+      "emotion": "angry",
+      "text": "走错门了吧。出去。"
+    },
+    {
+      "speaker": -2,
+      "text": "他的声音不高，却像是把你一瞬间推回了门外。你注意到他手边的乐谱上写满了被划掉又重写的歌词。"
+    },
+    {
+      "speaker": -1,
+      "text": "（他看起来……并不是真的在生气。更像是，不想让人靠近。）"
+    },
+    {
+      "speaker": -1,
+      "text": "我看到你们贴的招聘经理人的广告了。"
+    },
+    {
+      "speaker": 0,
+      "emotion": "normal",
+      "text": "……"
+    },
+    {
+      "speaker": 0,
+      "emotion": "normal",
+      "text": "那张广告是林知远自作主张贴的。我们不需要。"
+    },
+    {
+      "speaker": -1,
+      "text": "可是你们快解散了，不是吗？"
+    },
+    {
+      "speaker": 0,
+      "emotion": "angry",
+      "text": "——这不是你该管的事。"
+    },
+    {
+      "speaker": -2,
+      "text": "他转过身，冷漠的侧脸里藏着某种破碎的东西。你犹豫了一下，该怎么回应他？"
+    },
+    {
+      "speaker": -1,
+      "text": "（我该怎么回答？）"
+    },
+    {
+      "speaker": -1,
+      "emotion": "normal",
+      "text": "那我现在就告辞。"
+    },
+    {
+      "speaker": 0,
+      "emotion": "normal",
+      "text": "……随你。"
+    },
+    {
+      "speaker": -2,
+      "text": "你转身走向门口，手搭上门把。身后忽然传来一句很轻的声音——"
+    },
+    {
+      "speaker": 0,
+      "emotion": "sad",
+      "text": "……明天这个时间，还会来吗？"
+    },
+    {
+      "speaker": -1,
+      "emotion": "shy",
+      "text": "（他在……邀请我？）"
+    },
+    {
+      "speaker": -2,
+      "text": "第一次见面，以一句欲言又止的告别结束。但你知道，这不会是最后一次。"
+    },
+    {
+      "speaker": -1,
+      "emotion": "normal",
+      "text": "我想试试看。"
+    },
+    {
+      "speaker": 0,
+      "emotion": "normal",
+      "text": "哼……随你便。"
+    },
+    {
+      "speaker": -2,
+      "text": "他的语气里没有拒绝。这或许就是一个开始。"
+    }
+  ],
+  "choices": [
+    {
+      "afterLine": 15,
+      "prompt": "你会怎么回答？",
+      "choices": [
+        {
+          "text": "「我只是想帮你们。如果你们需要的话。」",
+          "jumpTo": 17,
+          "affinityDelta": 5
+        },
+        {
+          "text": "「那就是怕被真正懂音乐的人看见吧？」",
+          "jumpTo": 17,
+          "affinityDelta": 3
+        },
+        {
+          "text": "「抱歉，打扰了。」",
+          "jumpTo": 16,
+          "affinityDelta": 1
+        }
+      ]
+    }
+  ]
+}
