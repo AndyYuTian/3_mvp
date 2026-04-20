@@ -25,6 +25,16 @@ export type AffinityEvent = {
     reason: string;
 };
 
+// ─── 好感度规则配置 ─────────────────────────────────────────
+// 统一放在顶部，方便你调试数值
+const AFFINITY_RULES = {
+    perTargetTile:    1,     // 每个目标方块：弱化为 1 点
+    chainBonus:       2,     // 触发连锁：+2 点
+    clearReward:      5,     // 通关基础奖励：+5 点
+    threeStarBonus:   15,    // 三星通关额外奖励：+15 点（强化）
+    twoStarBonus:     5,     // 二星通关额外奖励：+5 点
+};
+
 @ccclass("GameManager")
 export class GameManager extends Component {
 
@@ -41,7 +51,7 @@ export class GameManager extends Component {
     labelTarget!: Label;
 
     @property(Node)
-    targetIcon: Node = null!;    // 目标方块图标节点
+    targetIcon: Node = null!;
 
     @property(Label)
     labelLevel: Label = null!;
@@ -54,6 +64,11 @@ export class GameManager extends Component {
     score      = 0;
     private eliminated = 0;
     private result: LevelResult = "playing";
+
+    // 本关开始时各角色好感度的快照（用于在结算弹窗显示 +N 的变化）
+    private affinityBefore: Record<number, number> = {};
+    // 本关好感度变化量（累加，包括通关奖励）
+    affinityGainThisLevel = 0;
 
     private allLevels: LevelConfig[] = [];
     private currentLevelIndex = 0;
@@ -144,6 +159,10 @@ export class GameManager extends Component {
         this.eliminated = 0;
         this.result     = "playing";
 
+        // 记录好感度起点，用于结算时显示 +N
+        this.affinityBefore = { ...this.affinity };
+        this.affinityGainThisLevel = 0;
+
         this.board.setCallbacks(
             this.onMatch.bind(this),
             this.onDeadlock.bind(this)
@@ -163,8 +182,10 @@ export class GameManager extends Component {
         const targetHit = matched.filter(c => c.type === this.config.targetType).length;
         this.eliminated += targetHit;
 
+        // 弱化的过程好感度：每个目标方块 +1，连锁 +2
         if (targetHit > 0 && this.config.charId !== undefined) {
-            const delta = targetHit * 2 + (isChain ? 5 : 0);
+            const delta = targetHit * AFFINITY_RULES.perTargetTile
+                        + (isChain ? AFFINITY_RULES.chainBonus : 0);
             this.addAffinity(this.config.charId, delta, "关卡消除");
         }
 
@@ -177,15 +198,34 @@ export class GameManager extends Component {
         this.board.resetBoard();
     }
 
+    // 星级规则：和 ResultPanel 保持一致
+    private calcStars(stepsLeft: number, maxSteps: number): number {
+        const ratio = stepsLeft / maxSteps;
+        if (ratio >= 1 / 3) return 3;
+        if (ratio >= 1 / 5) return 2;
+        return 1;
+    }
+
     private checkResult() {
         const won  = this.eliminated >= this.config.targetCount;
         const lost = !won && this.stepsLeft <= 0;
 
         if (won) {
             this.result = "win";
+
             if (this.config.charId !== undefined) {
-                this.addAffinity(this.config.charId, 10, "关卡通关");
+                // 基础通关奖励
+                this.addAffinity(this.config.charId, AFFINITY_RULES.clearReward, "关卡通关");
+
+                // 按星级追加奖励（三星给得最多，推动玩家追求高星）
+                const stars = this.calcStars(this.stepsLeft, this.config.maxSteps);
+                if (stars === 3) {
+                    this.addAffinity(this.config.charId, AFFINITY_RULES.threeStarBonus, "三星通关");
+                } else if (stars === 2) {
+                    this.addAffinity(this.config.charId, AFFINITY_RULES.twoStarBonus, "二星通关");
+                }
             }
+
             this.saveAffinity();
             this.onLevelEnd?.("win", this.config);
             this.showResult("win");
@@ -206,13 +246,22 @@ export class GameManager extends Component {
     }
 
     addAffinity(charId: number, delta: number, reason: string) {
-        this.affinity[charId] = Math.min(100,
-            Math.max(0, (this.affinity[charId] ?? 0) + delta));
-        this.onAffinity?.({ charId, delta, reason });
+        const oldVal = this.affinity[charId] ?? 0;
+        this.affinity[charId] = Math.min(100, Math.max(0, oldVal + delta));
+        const actualDelta = this.affinity[charId] - oldVal;
+        this.affinityGainThisLevel += actualDelta;
+        this.onAffinity?.({ charId, delta: actualDelta, reason });
     }
 
     getAffinity(charId: number): number {
         return this.affinity[charId] ?? 0;
+    }
+
+    // 获取本关该角色好感度涨了多少（给 ResultPanel 用）
+    getAffinityGainForChar(charId: number): number {
+        const before = this.affinityBefore[charId] ?? 0;
+        const now    = this.affinity[charId] ?? 0;
+        return now - before;
     }
 
     checkAffinityUnlock(charId: number): number | null {
@@ -242,25 +291,24 @@ export class GameManager extends Component {
     }
 
     private updateUI() {
-    if (this.labelSteps)
-        this.labelSteps.string = `步数：${this.stepsLeft}`;
+        if (this.labelSteps)
+            this.labelSteps.string = `步数：${this.stepsLeft}`;
 
-    if (this.labelScore)
-        this.labelScore.string = `得分：${this.score}`;
+        if (this.labelScore)
+            this.labelScore.string = `得分：${this.score}`;
 
-    if (this.labelTarget) {
-        const remain = Math.max(0, this.config.targetCount - this.eliminated);
-        const name = TILE_NAMES[this.config.targetType] ?? "";
-        this.labelTarget.string = `消除 ${name} × ${remain}`;
-    }
+        if (this.labelTarget) {
+            const remain = Math.max(0, this.config.targetCount - this.eliminated);
+            const name = TILE_NAMES[this.config.targetType] ?? "";
+            this.labelTarget.string = `消除 ${name} × ${remain}`;
+        }
 
-    // 绘制目标方块图标
-    this.drawTargetIcon();
+        this.drawTargetIcon();
     }
 
     private drawTargetIcon() {
         if (!this.targetIcon) return;
-        
+
         const g = this.targetIcon.getComponent(Graphics);
         if (!g) return;
 

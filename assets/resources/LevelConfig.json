@@ -1,45 +1,174 @@
 [
   {
     "levelId": 1,
-    "maxSteps": 25,
+    "maxSteps": 30,
     "targetType": 1,
-    "targetCount": 12,
+    "targetCount": 10,
     "storyTrigger": 101,
     "charId": 0,
-    "comment": "第1关：消除12个吉他拨片，通关触发叶司宸初见剧情"
+    "comment": "第1关：叶司宸线开场，步数宽松，消10个吉他拨片（目标色约占1/5）"
   },
   {
     "levelId": 2,
-    "maxSteps": 25,
+    "maxSteps": 28,
     "targetType": 2,
-    "targetCount": 12,
-    "storyTrigger": 102,
+    "targetCount": 10,
+    "storyTrigger": 201,
     "charId": 1,
-    "comment": "第2关：消除12个鼓棒，通关触发方宁朔初见剧情"
+    "comment": "第2关：林知远登场，鼓棒目标"
   },
   {
     "levelId": 3,
     "maxSteps": 28,
     "targetType": 3,
-    "targetCount": 15,
-    "storyTrigger": 103,
+    "targetCount": 12,
+    "storyTrigger": 301,
     "charId": 2,
-    "comment": "第3关：消除15个黑胶唱片，通关触发顾铭川初见剧情"
+    "comment": "第3关：顾铭川，目标略提升"
+  },
+  {
+    "levelId": 4,
+    "maxSteps": 28,
+    "targetType": 4,
+    "targetCount": 12,
+    "storyTrigger": 401,
+    "charId": 3,
+    "comment": "第4关：方宁朔，四位男主介绍完毕"
   },
   {
     "levelId": 5,
-    "maxSteps": 20,
+    "maxSteps": 25,
     "targetType": 1,
-    "targetCount": 20,
-    "comment": "第5关：限制步数更少，无剧情触发，纯挑战关"
+    "targetCount": 15,
+    "charId": 0,
+    "comment": "第5关：叶司宸线中期，挑战目标，约触发好感度解锁30"
+  },
+  {
+    "levelId": 6,
+    "maxSteps": 25,
+    "targetType": 2,
+    "targetCount": 15,
+    "charId": 1,
+    "comment": "第6关：林知远中期"
+  },
+  {
+    "levelId": 7,
+    "maxSteps": 25,
+    "targetType": 3,
+    "targetCount": 15,
+    "charId": 2,
+    "comment": "第7关：顾铭川中期"
   },
   {
     "levelId": 8,
-    "maxSteps": 30,
+    "maxSteps": 25,
+    "targetType": 4,
+    "targetCount": 15,
+    "charId": 3,
+    "comment": "第8关：方宁朔中期"
+  },
+  {
+    "levelId": 9,
+    "maxSteps": 22,
+    "targetType": 1,
+    "targetCount": 18,
+    "storyTrigger": 102,
+    "charId": 0,
+    "comment": "第9关：叶司宸深度剧情触发点"
+  },
+  {
+    "levelId": 10,
+    "maxSteps": 22,
+    "targetType": 2,
+    "targetCount": 18,
+    "storyTrigger": 202,
+    "charId": 1,
+    "comment": "第10关：林知远深度剧情"
+  },
+  {
+    "levelId": 11,
+    "maxSteps": 22,
+    "targetType": 3,
+    "targetCount": 18,
+    "storyTrigger": 302,
+    "charId": 2,
+    "comment": "第11关：顾铭川深度剧情"
+  },
+  {
+    "levelId": 12,
+    "maxSteps": 22,
+    "targetType": 4,
+    "targetCount": 18,
+    "storyTrigger": 402,
+    "charId": 3,
+    "comment": "第12关：方宁朔深度剧情"
+  },
+  {
+    "levelId": 13,
+    "maxSteps": 20,
+    "targetType": 1,
+    "targetCount": 22,
+    "charId": 0,
+    "comment": "第13关：叶司宸高难度"
+  },
+  {
+    "levelId": 14,
+    "maxSteps": 20,
+    "targetType": 2,
+    "targetCount": 22,
+    "charId": 1,
+    "comment": "第14关：林知远高难度"
+  },
+  {
+    "levelId": 15,
+    "maxSteps": 20,
+    "targetType": 3,
+    "targetCount": 22,
+    "charId": 2,
+    "comment": "第15关：顾铭川高难度"
+  },
+  {
+    "levelId": 16,
+    "maxSteps": 20,
+    "targetType": 4,
+    "targetCount": 22,
+    "charId": 3,
+    "comment": "第16关：方宁朔高难度"
+  },
+  {
+    "levelId": 17,
+    "maxSteps": 18,
+    "targetType": 1,
+    "targetCount": 25,
+    "storyTrigger": 103,
+    "charId": 0,
+    "comment": "第17关：叶司宸终章"
+  },
+  {
+    "levelId": 18,
+    "maxSteps": 18,
+    "targetType": 2,
+    "targetCount": 25,
+    "storyTrigger": 203,
+    "charId": 1,
+    "comment": "第18关：林知远终章"
+  },
+  {
+    "levelId": 19,
+    "maxSteps": 18,
+    "targetType": 3,
+    "targetCount": 25,
+    "storyTrigger": 303,
+    "charId": 2,
+    "comment": "第19关：顾铭川终章"
+  },
+  {
+    "levelId": 20,
+    "maxSteps": 18,
     "targetType": 4,
     "targetCount": 25,
-    "storyTrigger": 201,
-    "charId": 0,
-    "comment": "第8关：首个里程碑关，通关后解锁叶司宸第一段深度剧情"
+    "storyTrigger": 403,
+    "charId": 3,
+    "comment": "第20关：方宁朔终章"
   }
 ]
