@@ -4,6 +4,7 @@
 
 import { _decorator, Component, Label, Node, resources, JsonAsset } from "cc";
 import { BoardController } from "./BoardController";
+import { ResultPanel } from "./ResultPanel";
 import { TileCell, TileType } from "./TileData";
 
 const { ccclass, property } = _decorator;
@@ -43,8 +44,8 @@ export class GameManager extends Component {
     @property(Label)
     labelLevel: Label = null!;
 
-    @property(Node)
-    resultPanelNode: Node = null!;
+    @property(ResultPanel)
+    resultPanel: ResultPanel = null!;
 
     private config!: LevelConfig;
     stepsLeft  = 0;
@@ -195,16 +196,11 @@ export class GameManager extends Component {
     }
 
     private showResult(result: LevelResult) {
-        if (!this.resultPanelNode) {
-            console.warn("resultPanelNode 未绑定");
+        if (!this.resultPanel) {
+            console.warn("resultPanel 未绑定");
             return;
         }
-        const panel = this.resultPanelNode.getComponent("ResultPanel") as any;
-        if (panel && typeof panel.show === "function") {
-            panel.show(result, this.config, this.score, this.stepsLeft);
-        } else {
-            console.warn("ResultPanel 组件找不到或没有 show 方法");
-        }
+        this.resultPanel.show(result, this.config, this.score, this.stepsLeft);
     }
 
     addAffinity(charId: number, delta: number, reason: string) {

@@ -45,15 +45,15 @@ export class ResultPanel extends Component {
         this.node.active = true;
 
         if (result === "win") {
-            this.titleLabel.string = "通关！";
-            this.nextButton.active = true;
-            this.retryButton.active = false;
+            if (this.titleLabel) this.titleLabel.string = "通关！";
+            if (this.nextButton)  this.nextButton.active  = true;
+            if (this.retryButton) this.retryButton.active = false;
 
-            // 星级：按剩余步数计算
-            const stars = this.calcStars(steps, config.maxSteps);
-            this.starsLabel.string = "★".repeat(stars) + "☆".repeat(3 - stars);
+            if (this.starsLabel) {
+                const stars = this.calcStars(steps, config.maxSteps);
+                this.starsLabel.string = "★".repeat(stars) + "☆".repeat(3 - stars);
+            }
 
-            // 好感度变化提示（如果有关联角色）
             if (config.charId !== undefined && this.affinityLabel) {
                 const names = ["叶司宸", "林知远", "顾铭川", "方宁朔"];
                 const aff = this.gameManager.getAffinity(config.charId);
@@ -63,14 +63,14 @@ export class ResultPanel extends Component {
                 this.affinityLabel.node.active = false;
             }
         } else {
-            this.titleLabel.string = "挑战失败";
-            this.nextButton.active = false;
-            this.retryButton.active = true;
-            this.starsLabel.string = "☆☆☆";
+            if (this.titleLabel)  this.titleLabel.string   = "挑战失败";
+            if (this.nextButton)  this.nextButton.active   = false;
+            if (this.retryButton) this.retryButton.active  = true;
+            if (this.starsLabel)  this.starsLabel.string   = "☆☆☆";
             if (this.affinityLabel) this.affinityLabel.node.active = false;
         }
 
-        this.scoreLabel.string = `得分 ${score}`;
+        if (this.scoreLabel) this.scoreLabel.string = `得分 ${score}`;
     }
 
     hide() {

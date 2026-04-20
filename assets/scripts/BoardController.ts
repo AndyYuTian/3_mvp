@@ -171,51 +171,55 @@ export class BoardController extends Component {
     private async trySwap(r1: number, c1: number, r2: number, c2: number) {
         this.isLocked = true;
 
-        // 1. 执行交换动画
-        await this.animateSwap(r1, c1, r2, c2);
-        this.data.swap(r1, c1, r2, c2);
-
-        // 2. 检查是否有消除
-        const matches = this.data.findAllMatches();
-        if (matches.length === 0) {
-            // 无效交换：换回来
+        try {
+            // 1. 执行交换动画
             await this.animateSwap(r1, c1, r2, c2);
             this.data.swap(r1, c1, r2, c2);
+
+            // 2. 检查是否有消除
+            const matches = this.data.findAllMatches();
+            if (matches.length === 0) {
+                // 无效交换：换回来
+                await this.animateSwap(r1, c1, r2, c2);
+                this.data.swap(r1, c1, r2, c2);
+                return;
+            }
+
+            // 3. 连锁消除循环
+            let isChain = false;
+            let totalScore = 0;
+            let allMatched: TileCell[] = [];
+
+            let toProcess = matches;
+            while (toProcess.length > 0) {
+                // 消除
+                const score = this.data.applyMatch(toProcess);
+                totalScore += score;
+                allMatched = allMatched.concat(toProcess);
+                await this.animateRemove(toProcess);
+
+                // 下落
+                const fallResult = this.data.applyFall();
+                await this.animateFall(fallResult);
+
+                // 再次检查连锁
+                toProcess = this.data.findAllMatches();
+                if (toProcess.length > 0) isChain = true;
+            }
+
+            // 4. 通知 GameManager
+            this.onMatchCallback?.(allMatched, totalScore, isChain);
+
+            // 5. 检查死局
+            if (!this.data.hasValidMove()) {
+                this.onDeadlockCallback?.();
+            }
+        } catch (e) {
+            console.error("trySwap 发生错误，重置棋盘", e);
+            this.resetBoard();
+        } finally {
             this.isLocked = false;
-            return;
         }
-
-        // 3. 连锁消除循环
-        let isChain = false;
-        let totalScore = 0;
-        let allMatched: TileCell[] = [];
-
-        let toProcess = matches;
-        while (toProcess.length > 0) {
-            // 消除
-            const score = this.data.applyMatch(toProcess);
-            totalScore += score;
-            allMatched = allMatched.concat(toProcess);
-            await this.animateRemove(toProcess);
-
-            // 下落
-            const fallResult = this.data.applyFall();
-            await this.animateFall(fallResult);
-
-            // 再次检查连锁
-            toProcess = this.data.findAllMatches();
-            if (toProcess.length > 0) isChain = true;
-        }
-
-        // 4. 通知 GameManager
-        this.onMatchCallback?.(allMatched, totalScore, isChain);
-
-        // 5. 检查死局
-        if (!this.data.hasValidMove()) {
-            this.onDeadlockCallback?.();
-        }
-
-        this.isLocked = false;
     }
 
     // ─── 动画 ──────────────────────────────────────────────────
@@ -262,124 +266,96 @@ export class BoardController extends Component {
         const step = this.tileSize + this.tileGap;
         const startY = (this.rows / 2 - 0.5) * step;
         const startX = -(this.cols / 2 - 0.5) * step;
-    
         const promises: Promise<void>[] = [];
-    
-        // ─── 关键：先构建新的 tileNodes 映射，避免引用覆盖 ───
-    
-        // 1. 收集所有需要保留的节点（从下落和静止的格子中）
-        const newTileNodes: Node[][] = [];
+
+        // 1. 先把 moved 的源位置记录成 Set，方便后面 O(1) 查询
+        const moveSourceSet = new Set(
+            result.moved.map(m => `${m.fromRow},${m.cell.col}`)
+        );
+
+        // 2. 收集所有 scale=0（已消除）的节点进死亡池，供新砖块复用
+        const deadPool: Node[] = [];
         for (let r = 0; r < this.rows; r++) {
-            newTileNodes[r] = new Array(this.cols);
+            for (let c = 0; c < this.cols; c++) {
+                const n = this.tileNodes[r][c];
+                if (n && n.isValid && n.scale.x === 0) {
+                    deadPool.push(n);
+                }
+            }
         }
-    
-        // 2. 先处理下落的方块：从 fromRow 移动到 cell.row
+
+        // 3. 构建新 tileNodes
+        const newTileNodes: Node[][] = Array.from(
+            { length: this.rows }, () => new Array<Node>(this.cols)
+        );
+
+        // 静止不动的砖块直接映射
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (moveSourceSet.has(`${r},${c}`)) continue;
+                const n = this.tileNodes[r][c];
+                if (n && n.isValid && n.scale.x > 0) {
+                    newTileNodes[r][c] = n;
+                }
+            }
+        }
+
+        // 下落砖块：动画移到新位置
         result.moved.forEach(({ cell, fromRow }) => {
             const node = this.tileNodes[fromRow][cell.col];
+            if (!node || !node.isValid) return;
             newTileNodes[cell.row][cell.col] = node;
-    
             const targetY = startY - cell.row * step;
-            promises.push(new Promise(resolve => {
+            promises.push(new Promise<void>(resolve => {
                 tween(node)
                     .to(0.2, { position: v3(node.position.x, targetY, 0) },
                         { easing: "quadIn" })
-                    .call(resolve)
+                    .call(() => resolve())
                     .start();
             }));
         });
-    
-        // 3. 处理没有移动、也没有被消除的方块（静止不动的）
-        for (let r = 0; r < this.rows; r++) {
-            for (let c = 0; c < this.cols; c++) {
-                if (newTileNodes[r][c]) continue; // 已经被下落方块占了
-    
-                // 当前位置如果有节点且未被消除（scale != 0），保留
-                const existing = this.tileNodes[r][c];
-                if (existing && existing.isValid && existing.scale.x > 0) {
-                    // 检查它不是已经被 moved 列表认领过的源节点
-                    const isSourceOfMove = result.moved.some(
-                        m => m.fromRow === r && m.cell.col === c
-                    );
-                    if (!isSourceOfMove) {
-                        newTileNodes[r][c] = existing;
-                    }
-                }
-            }
-        }
-    
-        // 4. 处理新补充方块：复用被消除的节点（scale=0 的），重新绘制并下落
+
+        // 新补充砖块：从死亡池取节点复用，池空了才新建
         result.added.forEach(cell => {
-            // 找一个未被使用的节点来复用（原本被消除的节点）
-            let reuseNode: Node | null = null;
-            for (let r = 0; r < this.rows; r++) {
-                for (let c = 0; c < this.cols; c++) {
-                    const n = this.tileNodes[r][c];
-                    if (!n || !n.isValid) continue;
-                    // 检查这个节点没有被新数组引用
-                    const isUsed = newTileNodes.some(row => row.includes(n));
-                    if (!isUsed && n.scale.x === 0) {
-                        reuseNode = n;
-                        break;
-                    }
-                }
-                if (reuseNode) break;
-            }
-    
-            // 如果找不到可复用的节点，新建一个
-            if (!reuseNode) {
-                reuseNode = this.createTileNode(cell.row, cell.col);
-                this.node.addChild(reuseNode);
-            }
-    
-            newTileNodes[cell.row][cell.col] = reuseNode;
-    
             const targetY = startY - cell.row * step;
             const targetX = startX + cell.col * step;
-            const spawnY = startY + this.tileSize * 2;
-    
-            // 重绘并重置缩放
-            const g = reuseNode.getComponent(Graphics)!;
+            const spawnY  = startY + this.tileSize * 2;
+
+            const node = deadPool.length > 0
+                ? deadPool.pop()!
+                : this.createTileNode(cell.row, cell.col);
+
+            if (!node.parent) this.node.addChild(node);
+
+            node.scale = v3(1, 1, 1);
+            const g = node.getComponent(Graphics)!;
             this.drawTile(g, cell.type);
-            reuseNode.scale = v3(1, 1, 1);
-            reuseNode.setPosition(targetX, spawnY, 0);
-    
-            // 重新绑定点击事件到新位置
-            reuseNode.off(Node.EventType.TOUCH_END);
-            const r = cell.row, c = cell.col;
-            reuseNode.on(Node.EventType.TOUCH_END, () => {
-                this.onTileTouch(r, c);
-            });
-    
-            promises.push(new Promise(resolve => {
-                tween(reuseNode!)
+            node.setPosition(targetX, spawnY, 0);
+            newTileNodes[cell.row][cell.col] = node;
+
+            promises.push(new Promise<void>(resolve => {
+                tween(node)
                     .to(0.25, { position: v3(targetX, targetY, 0) },
                         { easing: "quadIn" })
-                    .call(resolve)
+                    .call(() => resolve())
                     .start();
             }));
         });
-    
-        // 5. 替换整个 tileNodes 数组
+
+        // 死亡池里剩余的节点彻底销毁
+        deadPool.forEach(n => n.destroy());
+
+        // 4. 替换 tileNodes，统一重绑点击事件
         this.tileNodes = newTileNodes;
-    
-        // 6. 关键：所有幸存节点的点击事件要重新绑定到新坐标
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const node = this.tileNodes[r][c];
                 if (!node || !node.isValid) continue;
-                // 检查是否是新补充的（新补充的已经在上面绑定了）
-                const isNewlyAdded = result.added.some(
-                    cell => cell.row === r && cell.col === c
-                );
-                if (isNewlyAdded) continue;
-    
                 node.off(Node.EventType.TOUCH_END);
-                node.on(Node.EventType.TOUCH_END, () => {
-                    this.onTileTouch(r, c);
-                });
+                node.on(Node.EventType.TOUCH_END, () => this.onTileTouch(r, c));
             }
         }
-    
+
         return Promise.all(promises).then(() => {});
     }
     
