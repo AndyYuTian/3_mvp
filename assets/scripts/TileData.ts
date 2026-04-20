@@ -27,3 +27,13 @@ export interface TileCell {
     row:  number;
     col:  number;
 }
+
+// 方块显示名称（用于 UI）
+export const TILE_NAMES: Record<TileType, string> = {
+    [TileType.None]:   "",
+    [TileType.Guitar]: "吉他拨片",
+    [TileType.Drum]:   "鼓棒",
+    [TileType.Vinyl]:  "黑胶",
+    [TileType.Mic]:    "麦克风",
+    [TileType.Note]:   "音符",
+};

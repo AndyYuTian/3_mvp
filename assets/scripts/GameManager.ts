@@ -1,11 +1,10 @@
 // GameManager.ts
 // 关卡状态管理器
 // 负责：步数、分数、目标、关卡结束判定、关卡进度管理
-
-import { _decorator, Component, Label, Node, resources, JsonAsset } from "cc";
+import { _decorator, Component, Label, Node, Graphics, Color, resources, JsonAsset } from "cc";
 import { BoardController } from "./BoardController";
 import { ResultPanel } from "./ResultPanel";
-import { TileCell, TileType } from "./TileData";
+import { TileCell, TileType, TILE_COLORS, TILE_NAMES } from "./TileData";
 
 const { ccclass, property } = _decorator;
 
@@ -40,6 +39,9 @@ export class GameManager extends Component {
 
     @property(Label)
     labelTarget!: Label;
+
+    @property(Node)
+    targetIcon: Node = null!;    // 目标方块图标节点
 
     @property(Label)
     labelLevel: Label = null!;
@@ -240,16 +242,36 @@ export class GameManager extends Component {
     }
 
     private updateUI() {
-        if (this.labelSteps)
-            this.labelSteps.string = `步数：${this.stepsLeft}`;
+    if (this.labelSteps)
+        this.labelSteps.string = `步数：${this.stepsLeft}`;
 
-        if (this.labelScore)
-            this.labelScore.string = `得分：${this.score}`;
+    if (this.labelScore)
+        this.labelScore.string = `得分：${this.score}`;
 
-        if (this.labelTarget) {
-            const remain = Math.max(0, this.config.targetCount - this.eliminated);
-            this.labelTarget.string = `目标：${remain}`;
-        }
+    if (this.labelTarget) {
+        const remain = Math.max(0, this.config.targetCount - this.eliminated);
+        const name = TILE_NAMES[this.config.targetType] ?? "";
+        this.labelTarget.string = `消除 ${name} × ${remain}`;
+    }
+
+    // 绘制目标方块图标
+    this.drawTargetIcon();
+    }
+
+    private drawTargetIcon() {
+        if (!this.targetIcon) return;
+        
+        const g = this.targetIcon.getComponent(Graphics);
+        if (!g) return;
+
+        const hex = TILE_COLORS[this.config.targetType] ?? "#888888";
+        const color = new Color();
+        Color.fromHEX(color, hex);
+
+        g.clear();
+        g.fillColor = color;
+        g.roundRect(-18, -18, 36, 36, 6);
+        g.fill();
     }
 
     watchAdForSteps() {
