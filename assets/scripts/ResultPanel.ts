@@ -81,9 +81,9 @@ export class ResultPanel extends Component {
 
         if (won) {
             const gain = this.gameManager.getAffinityGainForChar(config.charId);
-            this.affinityLabel.string = `${name}  好感度 ${current}/100  (+${gain})`;
+            this.affinityLabel.string = `${name}  好感度 ${current}/500  (+${gain})`;
         } else {
-            this.affinityLabel.string = `${name}  好感度 ${current}/100`;
+            this.affinityLabel.string = `${name}  好感度 ${current}/500`;
         }
     }
 

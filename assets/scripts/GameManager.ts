@@ -289,7 +289,7 @@ export class GameManager extends Component {
 
     addAffinity(charId: number, delta: number, reason: string) {
         const oldVal = this.affinity[charId] ?? 0;
-        this.affinity[charId] = Math.min(100, Math.max(0, oldVal + delta));
+        this.affinity[charId] = Math.min(500, Math.max(0, oldVal + delta));
         const actualDelta = this.affinity[charId] - oldVal;
         this.affinityGainThisLevel += actualDelta;
         this.onAffinity?.({ charId, delta: actualDelta, reason });
@@ -307,9 +307,9 @@ export class GameManager extends Component {
 
     checkAffinityUnlock(charId: number): number | null {
         const val = this.getAffinity(charId);
-        if (val >= 90) return charId * 10 + 3;
-        if (val >= 60) return charId * 10 + 2;
-        if (val >= 30) return charId * 10 + 1;
+        if (val >= 300) return charId * 10 + 3;
+        if (val >= 150) return charId * 10 + 2;
+        if (val >= 60) return charId * 10 + 1;
         return null;
     }
 
