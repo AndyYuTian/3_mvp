@@ -4,6 +4,7 @@
 import { _decorator, Component, Node, Label, Button } from "cc";
 import { GameManager } from "./GameManager";
 import { LevelConfig, LevelResult } from "./GameManager";
+import { PopupAnimation } from "./PopupAnimation";
 
 const { ccclass, property } = _decorator;
 
@@ -42,6 +43,9 @@ export class ResultPanel extends Component {
 
     show(result: LevelResult, config: LevelConfig, score: number, steps: number) {
         this.node.active = true;
+        // 弹出动画
+        const popup = this.node.getComponent(PopupAnimation);
+        popup?.playShow();
 
         if (result === "win") {
             this.titleLabel.string = "通关！";
@@ -88,7 +92,14 @@ export class ResultPanel extends Component {
     }
 
     hide() {
-        this.node.active = false;
+        const popup = this.node.getComponent(PopupAnimation);
+        if (popup) {
+            popup.playHide(() => {
+                this.node.active = false;
+            });
+        } else {
+            this.node.active = false;
+        }
     }
 
     // 星级规则：剩 1/3 以上 = 3 星；剩 1/5 以上 = 2 星；通关 = 1 星

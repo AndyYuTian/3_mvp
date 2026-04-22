@@ -4,6 +4,7 @@ import { _decorator, Component, Label, Node, Graphics, Color, resources, JsonAss
 import { BoardController } from "./BoardController";
 import { ResultPanel } from "./ResultPanel";
 import { StoryManager } from "./StoryManager";
+import { AnimatedLabel } from "./AnimatedLabel";
 import { TileCell, TileType, TILE_COLORS, TILE_NAMES } from "./TileData";
 
 const { ccclass, property } = _decorator;
@@ -348,8 +349,9 @@ export class GameManager extends Component {
         if (this.labelSteps)
             this.labelSteps.string = `步数：${this.stepsLeft}`;
 
-        if (this.labelScore)
-            this.labelScore.string = `得分：${this.score}`;
+        const animLabel = this.labelScore?.node.getComponent(AnimatedLabel);
+        if (animLabel) animLabel.animateTo(this.score);
+        else if (this.labelScore) this.labelScore.string = `得分：${this.score}`;
 
         if (this.labelTarget) {
             const remain = Math.max(0, this.config.targetCount - this.eliminated);

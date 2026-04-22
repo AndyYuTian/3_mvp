@@ -15,11 +15,11 @@ export const TILE_COUNT = 5; // 方块种类数（不含 None）
 // 每种方块对应的颜色，用于占位矩形阶段
 export const TILE_COLORS: Record<TileType, string> = {
     [TileType.None]:   "#00000000",
-    [TileType.Guitar]: "#E24B4A",
-    [TileType.Drum]:   "#378ADD",
-    [TileType.Vinyl]:  "#7F77DD",
-    [TileType.Mic]:    "#1D9E75",
-    [TileType.Note]:   "#BA7517",
+    [TileType.Guitar]: "#FF7E8A",   // 粉红（原红色太硬）
+    [TileType.Drum]:   "#6EC1FF",   // 天蓝（原深蓝太重）
+    [TileType.Vinyl]:  "#B992FF",   // 柔紫
+    [TileType.Mic]:    "#5ED3A3",   // 薄荷绿
+    [TileType.Note]:   "#FFC947",   // 亮金（比原橙更活泼）
 };
 
 export interface TileCell {
