@@ -1,14 +1,14 @@
 // ResultPanel.ts
-// 关卡结算弹窗 - 显示本关好感度变化
+// 关卡结算弹窗 - 星级动态展示
 
 import { _decorator, Component, Node, Label, Button } from "cc";
 import { GameManager } from "./GameManager";
 import { LevelConfig, LevelResult } from "./GameManager";
+import { StarsDisplay } from "./StarsDisplay";
 import { PopupAnimation } from "./PopupAnimation";
 
 const { ccclass, property } = _decorator;
 
-// 角色名字映射
 const CHAR_NAMES = ["叶司宸", "林知远", "顾铭川", "方宁朔"];
 
 @ccclass("ResultPanel")
@@ -23,8 +23,9 @@ export class ResultPanel extends Component {
     @property(Label)
     scoreLabel!: Label;
 
-    @property(Label)
-    starsLabel!: Label;
+    // 星级显示（新）
+    @property(StarsDisplay)
+    starsDisplay: StarsDisplay = null!;
 
     @property(Label)
     affinityLabel: Label = null!;
@@ -43,7 +44,8 @@ export class ResultPanel extends Component {
 
     show(result: LevelResult, config: LevelConfig, score: number, steps: number) {
         this.node.active = true;
-        // 弹出动画
+
+        // 弹出动画（如果有 PopupAnimation 组件）
         const popup = this.node.getComponent(PopupAnimation);
         popup?.playShow();
 
@@ -53,14 +55,15 @@ export class ResultPanel extends Component {
             this.retryButton.active = false;
 
             const stars = this.calcStars(steps, config.maxSteps);
-            this.starsLabel.string = "★".repeat(stars) + "☆".repeat(3 - stars);
+            // 交给 StarsDisplay 组件播动画
+            this.starsDisplay?.show(stars);
 
             this.showAffinity(config, true);
         } else {
             this.titleLabel.string = "挑战失败";
             this.nextButton.active = false;
             this.retryButton.active = true;
-            this.starsLabel.string = "☆☆☆";
+            this.starsDisplay?.show(0);  // 0 星
 
             this.showAffinity(config, false);
         }
@@ -68,11 +71,9 @@ export class ResultPanel extends Component {
         this.scoreLabel.string = `得分 ${score}`;
     }
 
-    // 显示好感度信息（通关时显示 +N 的增幅）
     private showAffinity(config: LevelConfig, won: boolean) {
         if (!this.affinityLabel) return;
 
-        // 没有关联角色时的提示
         if (config.charId === undefined) {
             this.affinityLabel.node.active = true;
             this.affinityLabel.string = "本关无剧情关联";
@@ -102,7 +103,6 @@ export class ResultPanel extends Component {
         }
     }
 
-    // 星级规则：剩 1/3 以上 = 3 星；剩 1/5 以上 = 2 星；通关 = 1 星
     private calcStars(stepsLeft: number, maxSteps: number): number {
         const ratio = stepsLeft / maxSteps;
         if (ratio >= 1 / 3) return 3;
